@@ -23,3 +23,67 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
     "action": "join",
     "username": "string" 
 }
+```
+
+**Server Response (success)**
+```json
+{
+     "type": "player_joined",
+     "message": "string"
+}
+```
+
+**Server Response (error)**
+```json
+{
+    "type": "join_error",
+    "message": "string"
+}
+```
+
+# Quit
+**Client**
+```json
+{
+    "action": "quit",
+    "username": "string"
+}
+```
+
+**Server Response**
+```json
+{
+    "type": "player_quit",
+    "message": "string"
+}
+```
+
+# Move
+**Client**
+```json
+{
+    "action": "move",
+    "username": "string",
+    "move": "int"
+}
+```
+
+**Server response (success)**
+```json
+{
+    "type": "player_move",
+    "board": [
+        [],
+        [],
+        []
+        ]
+}
+```
+
+**Server response (error)**
+```json
+{
+    "type": "move_error",
+    "message": "string"
+}
+```
