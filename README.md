@@ -13,3 +13,13 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 
 **Additional resources:**
 * [https://docs.python.org/3/library/socket.html]
+
+# Message Protocol
+
+## Join
+**Client**
+ ```json
+{
+    "action": "join",
+    "username": "string" 
+}
