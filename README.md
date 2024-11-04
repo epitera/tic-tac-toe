@@ -14,6 +14,26 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 **Additional resources:**
 * [https://docs.python.org/3/library/socket.html]
 
+# Multi-Player Functionality
+
+## Game State Synchronization
+* Server keeps track of the board, initially each tile is an empty space
+* When a player enters a move (0-8), the server updates the board and sends it to the other player
+* This creates a back and forth of the board being continuosly updated until a player wins (win conditions still need to be implemented)
+
+## Client-Side Game Rendering
+* The updated board recieved from the server is displayed before the player makes their move
+
+## Turn-Based Gameplay
+* The first player who connected makes the first move
+* When player 1 makes their move and player 2 receives the updated game board from the server, it is automatically set to player 2's turn
+* While it is not a player's turn, they cannot enter a move on the command line
+
+## Player Identification
+* When a client makes a connection to the server, they are asked to enter a username
+* If the username is already taken by the other player, they are informed and prompted to enter a different username
+* On the server side, a hash map is used to link a player's username to their socket
+
 # Message Protocol
 
 ## Join
@@ -33,10 +53,18 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 }
 ```
 
-**Server Response (error)**
+**Server Response (username already taken error)**
 ```json
 {
     "type": "join_error",
+    "message": "string"
+}
+```
+
+**Server Response (too many players error)**
+```json
+{
+    "type": "limit_error",
     "message": "string"
 }
 ```
@@ -64,7 +92,8 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 {
     "action": "move",
     "username": "string",
-    "move": "int"
+    "move": "int",
+    "symbol": "char"
 }
 ```
 
@@ -72,11 +101,8 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 ```json
 {
     "type": "player_move",
-    "board": [
-        [],
-        [],
-        []
-        ]
+    "message": "string",
+    "board": []
 }
 ```
 
@@ -85,5 +111,14 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 {
     "type": "move_error",
     "message": "string"
+}
+```
+
+# Start game
+**Server**
+```json
+{
+   "type": "start_game",
+   "message": "string"
 }
 ```
