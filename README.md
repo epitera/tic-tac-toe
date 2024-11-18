@@ -34,6 +34,11 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 * If the username is already taken by the other player, they are informed and prompted to enter a different username
 * On the server side, a hash map is used to link a player's username to their socket
 
+# Game play, Game State, UI
+* Command Line Interface based gameplay
+* Server checks for win conditions every time a move if received from the client
+* Prompts both users if they want to play again once match has ended
+
 # Message Protocol
 
 ## Join
@@ -120,5 +125,25 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 {
    "type": "start_game",
    "message": "string"
+}
+```
+
+#Game over
+**Server**
+```json
+{
+    "type": "game_over",
+    "message": "string",
+    "board": []
+}
+```
+
+#Play Again
+**Client**
+```json
+{
+    "type": "play_again",
+    "username": "string",
+    "response": "string"
 }
 ```
