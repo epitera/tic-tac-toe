@@ -3,6 +3,7 @@ import socket
 import selectors
 import types
 import json
+import argparse
 
 sel = selectors.DefaultSelector()
 clients = {}
@@ -32,7 +33,7 @@ def broadcast(type, message, board=None, exclude_sock=None):
     for client_sock in clients.values():
         if client_sock != exclude_sock:
             try:
-                if type == "player_move":
+                if type == "player_move" or type == "game_over":
                     send_message(type, client_sock, message=message, board=board)
                 else:
                     send_message(type, client_sock, message=message)
@@ -47,6 +48,33 @@ def send_message(type, sock, **kwargs):
         sock.sendall(json.dumps(response).encode())
     except BrokenPipeError:
         print("response failed to send")
+
+def check_win(board, symbol):
+    win_conditions = [
+        [0,1,2], [3,4,5], [6,7,8],  
+        [0,3,6], [1,4,7], [2,5,8],  
+        [0,4,8], [2,4,6]            
+    ]
+
+    for condition in win_conditions:
+        if board[condition[0]] == symbol and board[condition[1]] == symbol and board[condition[2]] == symbol:
+            return True
+    return 
+
+def check_draw(board):
+    return ' ' not in board
+
+def close_connections():
+    for client_sock in clients.values():
+        sel.unregister(client_sock)
+        client_sock.close()
+    sel.close()
+    sys.exit(0)
+
+def reset_game():
+    global clients, board
+    clients = {}
+    board =  [' '] * 9
 
 def handle_message(data, sock, addr):
     try:
@@ -65,8 +93,17 @@ def handle_message(data, sock, addr):
             symbol = message["symbol"]
             board[move] = symbol
 
+            if check_win(board, symbol):
+                broadcast("game_over", f"{username} wins!", board)
+                reset_game()
+
+            elif check_draw(board):
+                broadcast("game_over", "It's a draw!", board)
+                reset_game()
+
             #send updated board to other player
-            broadcast("player_move", f"{username} placed {symbol} on tile {move}", board, sock)
+            else:
+                broadcast("player_move", f"{username} placed {symbol} on tile {move}", board, sock)
 
         elif action == "quit":
             #let other client know that the player has quit and delete from client list
@@ -75,6 +112,15 @@ def handle_message(data, sock, addr):
             print("closing connection to", addr)
             sel.unregister(sock)
             sock.close()
+
+        elif action == "play_again":
+            if message["response"] == "no":
+                print("closing connection to", addr)
+                sel.unregister(sock)
+                sock.close()
+            elif message["response"] == "yes":
+                register_user(sock, username)
+
 
     except json.JSONDecodeError:
         send_message("error", sock, message="Invalid message format")
@@ -96,7 +142,11 @@ def service_connection(key, mask):
         if recv_data:
             handle_message(recv_data.decode(), sock, data.addr)
 
-host, port = sys.argv[1], int(sys.argv[2])
+parser = argparse.ArgumentParser(description="Tic-Tac-Toe Server")
+parser.add_argument('-p', '--port', type=int, required=True, help="Server Port")
+args = parser.parse_args()
+
+host, port = '0.0.0.0', args.port
 lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 lsock.bind((host, port))
 lsock.listen()
