@@ -2,6 +2,7 @@ import sys
 import socket
 import json
 import time
+import argparse
 import selectors
 import types
 
@@ -32,6 +33,7 @@ def handle_response(data):
     elif type == "limit_error":
         print(f"Closing connection to {(host, port)}")
         sock.close()
+        sys.exit(0)
 
     elif type == "start_game":
         game_started = True
@@ -41,9 +43,15 @@ def handle_response(data):
         player_turn = True
 
     elif type == "player_quit":
-        print("You Win!")
+        #print("You Win!")
         game_over = True
 
+    elif type == "game_over":
+        board = response["board"]
+        print_board()
+        game_over = True
+        game_started = False
+        prompt_play_again()
 
 def send_message(action, **kwargs):
     message = {"action": action}
@@ -62,7 +70,7 @@ def start_connection(host, port, username):
         handle_response(recv_data.decode())
 
 def print_board():
-    print("Current Board:")
+    #print("Current Board:")
     print(f"{board[0]} | {board[1]} | {board[2]}")
     print("--+---+--")
     print(f"{board[3]} | {board[4]} | {board[5]}")
@@ -75,24 +83,49 @@ def check_move(move):
         return False
     return True
 
+def prompt_play_again():
+    global game_over
+    response = ''
+    while response.lower() not in ['yes', 'no']:
+        response = input("Do you want to play again? (yes/no): ")
+    send_message("play_again", username=username, response=response.lower())
+
+    if response == 'no':
+        print("Thank you for playing!")
+        sock.close()
+        sys.exit(0)
+
+    elif response == "yes":
+        game_over = False
+        wait_for_game()
+
+def wait_for_game():
+    print("Waiting for game to start")
+    while not game_started:
+        try:
+            recv_data = sock.recv(1024)
+            if recv_data:
+                handle_response(recv_data.decode())
+        except BlockingIOError:
+            time.sleep(0.1)
+            
+
+parser = argparse.ArgumentParser(description="Tic-Tac-Toe Client")
+parser.add_argument('-i', '--ip', required=True, help="Server IP / DNS")
+parser.add_argument('-p', '--port', type=int, required=True, help="Server Port")
+args = parser.parse_args()
+
 board = [' '] * 9
 symbol = ' '
 player_turn = False
 game_started = False
 game_over = False
-host, port = sys.argv[1], int(sys.argv[2])
+host, port = args.ip, args.port
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 username = input("Enter a username: ")
 start_connection(host, port, username)
 
-print("Waiting for game to start")
-while not game_started:
-    try:
-        recv_data = sock.recv(1024)
-        if recv_data:
-            handle_response(recv_data.decode())
-    except BlockingIOError:
-        time.sleep(0.1)
+wait_for_game()
 
 try:
     while not game_over:
@@ -112,7 +145,8 @@ try:
             elif action == "quit":
                 send_message(action, username=username)
                 print(f"Closing connection to {(host, port)}")
-                break
+                sock.close()
+                sys.exit(0)
             else:
                 print("invalid input")
                 continue
