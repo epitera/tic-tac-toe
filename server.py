@@ -45,7 +45,7 @@ def send_message(type, sock, **kwargs):
     response = {"type" : type}
     response.update(kwargs)
     try:
-        sock.sendall(json.dumps(response).encode())
+        sock.sendall((json.dumps(response) + '\n').encode())
     except BrokenPipeError:
         print("response failed to send")
 
@@ -65,7 +65,7 @@ def check_draw(board):
     return ' ' not in board
 
 def close_connections():
-    for client_sock in clients.values():
+    for client_sock in list(clients.values()):
         sel.unregister(client_sock)
         client_sock.close()
     sel.close()
@@ -76,9 +76,9 @@ def reset_game():
     clients = {}
     board =  [' '] * 9
 
-def handle_message(data, sock, addr):
+def handle_message(message_data, sock, addr):
     try:
-        message = json.loads(data)
+        message = json.loads(message_data)
         action = message.get("action")
         username = message["username"]
 
@@ -112,6 +112,9 @@ def handle_message(data, sock, addr):
             print("closing connection to", addr)
             sel.unregister(sock)
             sock.close()
+            if not clients:
+                print("shutting down server")
+                close_connections()
 
         elif action == "play_again":
             if message["response"] == "no":
@@ -130,7 +133,7 @@ def accept_wrapper(sock):
     conn, addr = sock.accept()  
     print("accepted connection from", addr)
     conn.setblocking(False)
-    data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"")
+    data = types.SimpleNamespace(addr=addr, inb="", outb=b"")
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     sel.register(conn, events, data=data)
 
@@ -140,7 +143,26 @@ def service_connection(key, mask):
     if mask & selectors.EVENT_READ:
         recv_data = sock.recv(1024)  
         if recv_data:
-            handle_message(recv_data.decode(), sock, data.addr)
+            data.inb += recv_data.decode()
+            while '\n' in data.inb:
+                message, data.inb = data.inb.split('\n', 1)
+                handle_message(message, sock, data.addr)
+        else:
+            # Connection closed unexpectedly by client
+            print("closing connection to", data.addr)
+            # Find and remove the client from the clients dictionary
+            username = None
+            for user, client_sock in list(clients.items()):
+                if client_sock == sock:
+                    username = user
+                    del clients[user]
+                    break
+            sel.unregister(sock)
+            sock.close()
+            # Check if all clients have disconnected
+            if not clients:
+                print("shutting down server")
+                close_connections()
 
 parser = argparse.ArgumentParser(description="Tic-Tac-Toe Server")
 parser.add_argument('-p', '--port', type=int, required=True, help="Server Port")
@@ -165,6 +187,4 @@ try:
 except KeyboardInterrupt:
     print("caught keyboard interrupt, exiting")
 finally:
-    sel.close()
-
-
+    close_connections()
