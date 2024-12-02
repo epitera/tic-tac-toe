@@ -6,6 +6,20 @@ import argparse
 import selectors
 import types
 
+recv_buffer = ''
+
+def read_messages():
+    global recv_buffer
+    try:
+        recv_data = sock.recv(1024)
+        if recv_data:
+            recv_buffer += recv_data.decode()
+            while '\n' in recv_buffer:
+                message, recv_buffer = recv_buffer.split('\n', 1)
+                handle_response(message)
+    except BlockingIOError:
+        time.sleep(0.1)
+
 def handle_response(data):
     global game_started, player_turn, symbol, board, game_over
 
@@ -18,9 +32,7 @@ def handle_response(data):
     if type == "join_error":
         username = input("Enter a username: ")
         send_message("join", username)
-        recv_data = sock.recv(1024)
-        if recv_data:
-            handle_response(recv_data.decode())
+        read_messages()
 
     #first player who joined is 'X' and moves first
     #second player who joined is 'O' and moves second
@@ -43,7 +55,6 @@ def handle_response(data):
         player_turn = True
 
     elif type == "player_quit":
-        #print("You Win!")
         game_over = True
 
     elif type == "game_over":
@@ -57,7 +68,7 @@ def send_message(action, **kwargs):
     message = {"action": action}
     message.update(kwargs)
     try:
-        sock.sendall(json.dumps(message).encode())
+        sock.sendall((json.dumps(message) + '\n').encode())
     except BrokenPipeError:
         print("message failed to send")
 
@@ -65,12 +76,12 @@ def start_connection(host, port, username):
     sock.connect((host, port))
     print(f"Starting connection to {(host, port)}")
     send_message("join", username=username)
-    recv_data = sock.recv(1024)
-    if recv_data:
-        handle_response(recv_data.decode())
+    while True:
+        read_messages()
+        if symbol != ' ':
+            break
 
 def print_board():
-    #print("Current Board:")
     print(f"{board[0]} | {board[1]} | {board[2]}")
     print("--+---+--")
     print(f"{board[3]} | {board[4]} | {board[5]}")
@@ -84,7 +95,7 @@ def check_move(move):
     return True
 
 def prompt_play_again():
-    global game_over
+    global game_over, board
     response = ''
     while response.lower() not in ['yes', 'no']:
         response = input("Do you want to play again? (yes/no): ")
@@ -96,19 +107,14 @@ def prompt_play_again():
         sys.exit(0)
 
     elif response == "yes":
+        board = [' '] * 9
         game_over = False
         wait_for_game()
 
 def wait_for_game():
     print("Waiting for game to start")
     while not game_started:
-        try:
-            recv_data = sock.recv(1024)
-            if recv_data:
-                handle_response(recv_data.decode())
-        except BlockingIOError:
-            time.sleep(0.1)
-            
+        read_messages()
 
 parser = argparse.ArgumentParser(description="Tic-Tac-Toe Client")
 parser.add_argument('-i', '--ip', required=True, help="Server IP / DNS")
@@ -150,19 +156,10 @@ try:
             else:
                 print("invalid input")
                 continue
-
-            #recv_data = sock.recv(1024)
-            #if recv_data:
-                #handle_response(recv_data.decode())
         
         else:
             print("Waiting for opponent to finish turn")
-            try:
-                recv_data = sock.recv(1024)
-                if recv_data:
-                    handle_response(recv_data.decode())
-            except BlockingIOError:
-                time.sleep(0.1)
+            read_messages()
 
 except ConnectionRefusedError:
     print(f"Failed to connect to {(host, port)}")
