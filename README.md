@@ -128,7 +128,7 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 }
 ```
 
-#Game over
+# Game over
 **Server**
 ```json
 {
@@ -138,7 +138,7 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 }
 ```
 
-#Play Again
+# Play Again
 **Client**
 ```json
 {
@@ -147,3 +147,8 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
     "response": "string"
 }
 ```
+
+# Security/Risk Evaluation
+* Unencrypted Traffic: Data sent between the clients and the server is not encrypted and is instead cleartext. In a future iteration of the game, TLS or SSL encrpytion could be implemented to encrypt the data sent between server and client.
+* Denial of Service attacks: Numerous connection attempts or incorrect data from client to server can be sent causing a DOS attack. Adding rate limits and/or timeouts would help prevent this in a future iteration of the game.
+* Input validation vulnerabilties: The server accepts JSON input from clients without much validation. Stricly validating JSON inputs further would help mitigate security risks from malicious data.
