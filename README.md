@@ -152,3 +152,14 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets.
 * Unencrypted Traffic: Data sent between the clients and the server is not encrypted and is instead cleartext. In a future iteration of the game, TLS or SSL encrpytion could be implemented to encrypt the data sent between server and client.
 * Denial of Service attacks: Numerous connection attempts or incorrect data from client to server can be sent causing a DOS attack. Adding rate limits and/or timeouts would help prevent this in a future iteration of the game.
 * Input validation vulnerabilties: The server accepts JSON input from clients without much validation. Stricly validating JSON inputs further would help mitigate security risks from malicious data.
+
+# Retrospective
+
+## Where would I take this project?
+* The first thing would be to add increased security measures for client/server communication such as encryption and further input validation. The next thing would be to move away from a command line interface and instead implement a visually appealing UI for the clients. The last thing I would want to add would be optional alternative tic tac toe game modes such as Ultimate Tic Tac Toe.
+  
+# What went right?
+* Implementing the game logic was extremely straightforward and essentially worked as expected on the first try. I was also expecting the handling of simulataneous client connections to the server to be a headache but was also quite straightforward to implement.
+  
+# What could be improved?
+* As stated before, increased security measures and the UI for the clients could definitely be improved. Other than that, the format of the code could be cleaned up and organized. Many methods had to be created for modularity and it became slightly unorganized. Furthermore, I believe that efficiency could also be improved, as it wasn't my primary focus initally.
